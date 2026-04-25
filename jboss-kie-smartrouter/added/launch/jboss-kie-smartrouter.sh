@@ -216,7 +216,7 @@ function configure_router_tls() {
     # and there is no keystore file at the designated path
     if [ "${KIE_SERVER_ROUTER_TLS_TEST}" == "true" ] && [ -z "${KUBERNETES_SERVICE_HOST}" ] && ! [ -f "${KIE_SERVER_ROUTER_TLS_KEYSTORE}" ]; then
         log_warning "Container is in test mode and not in OpenShift, generating test certificate"
-        keytool -genkey -alias jboss -keyalg RSA -keystore /tmp/keystore.jks -storepass mykeystorepass -keypass mykeystorepass -dname CN=bob
+        keytool -genkey -alias jboss -keyalg RSA -storetype JKS -keystore /tmp/keystore.jks -storepass mykeystorepass -keypass mykeystorepass -dname CN=bob
         KIE_SERVER_ROUTER_TLS_KEYSTORE=/tmp/keystore.jks
     fi
 
@@ -229,11 +229,12 @@ function configure_router_tls() {
     # If the keystore is not readable, smartrouter startup will throw an exception
     # resulting in the http port being unavailable as well. So make sure ...
     keytool -list -alias ${KIE_SERVER_ROUTER_TLS_KEYSTORE_KEYALIAS} \
-	          -storepass ${KIE_SERVER_ROUTER_TLS_KEYSTORE_PASSWORD} \
-	          -keystore ${KIE_SERVER_ROUTER_TLS_KEYSTORE} &> /dev/null
+           -storetype JKS \
+           -storepass ${KIE_SERVER_ROUTER_TLS_KEYSTORE_PASSWORD} \
+           -keystore ${KIE_SERVER_ROUTER_TLS_KEYSTORE} &> /dev/null
     if [ "$?" -ne 0 ]; then
-	log_warning "Unable to read TLS keystore, skipping https setup"
-	return
+ log_warning "Unable to read TLS keystore, skipping https setup"
+ return
     fi
 
     JBOSS_KIE_ARGS="${JBOSS_KIE_ARGS} -Dorg.kie.server.router.tls.keystore=${KIE_SERVER_ROUTER_TLS_KEYSTORE}"
