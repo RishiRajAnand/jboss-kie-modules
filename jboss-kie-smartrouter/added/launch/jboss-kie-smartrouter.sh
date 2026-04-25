@@ -216,7 +216,12 @@ function configure_router_tls() {
     # and there is no keystore file at the designated path
     if [ "${KIE_SERVER_ROUTER_TLS_TEST}" == "true" ] && [ -z "${KUBERNETES_SERVICE_HOST}" ] && ! [ -f "${KIE_SERVER_ROUTER_TLS_KEYSTORE}" ]; then
         log_warning "Container is in test mode and not in OpenShift, generating test certificate"
-        keytool -genkey -alias jboss -keyalg RSA -storetype JKS -keystore /tmp/keystore.jks -storepass mykeystorepass -keypass mykeystorepass -dname CN=bob
+        # Use stronger key size and explicit parameters for RHEL 9 compatibility
+        keytool -genkeypair -alias jboss -keyalg RSA -keysize 2048 \
+                -storetype JKS -keystore /tmp/keystore.jks \
+                -storepass mykeystorepass -keypass mykeystorepass \
+                -dname "CN=bob" -validity 365 \
+                -ext SAN=dns:localhost,ip:127.0.0.1
         KIE_SERVER_ROUTER_TLS_KEYSTORE=/tmp/keystore.jks
     fi
 
