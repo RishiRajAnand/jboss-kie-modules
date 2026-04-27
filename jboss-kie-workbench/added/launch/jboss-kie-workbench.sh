@@ -91,20 +91,24 @@ function configure_kie_keystore() {
     local storetype="JCEKS"
     local keypass="kieKeyPassword"
     local serveralias="kieServerAlias"
-    echo $(get_kie_admin_pwd) | keytool -importpassword \
+    # Use -importpass for UBI 9/Java 11+ compatibility (not -importpassword)
+    echo $(get_kie_admin_pwd) | keytool -importpass \
         -keystore ${keystore} \
         -storepass ${storepass} \
         -storetype ${storetype} \
         -keypass ${keypass} \
         -alias ${serveralias} \
+        -J-Djava.security.egd=file:/dev/./urandom \
         > /dev/null 2>&1
     local ctrlalias="kieCtrlAlias"
-    echo $(get_kie_admin_pwd) | keytool -importpassword \
+    # Use -importpass for UBI 9/Java 11+ compatibility (not -importpassword)
+    echo $(get_kie_admin_pwd) | keytool -importpass \
         -keystore ${keystore} \
         -storepass ${storepass} \
         -storetype ${storetype} \
         -keypass ${keypass} \
         -alias ${ctrlalias} \
+        -J-Djava.security.egd=file:/dev/./urandom \
         > /dev/null 2>&1
     JBOSS_KIE_ARGS="${JBOSS_KIE_ARGS} -Dkie.keystore.keyStoreURL=file://${keystore}"
     JBOSS_KIE_ARGS="${JBOSS_KIE_ARGS} -Dkie.keystore.keyStorePwd=${storepass}"
