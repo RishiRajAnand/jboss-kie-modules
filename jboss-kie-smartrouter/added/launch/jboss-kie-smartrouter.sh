@@ -216,30 +216,68 @@ function configure_router_tls() {
     # and there is no keystore file at the designated path
     if [ "${KIE_SERVER_ROUTER_TLS_TEST}" == "true" ] && [ -z "${KUBERNETES_SERVICE_HOST}" ] && ! [ -f "${KIE_SERVER_ROUTER_TLS_KEYSTORE}" ]; then
         log_warning "Container is in test mode and not in OpenShift, generating test certificate"
+        log_info "Generating test keystore at /tmp/keystore.jks"
+        
         # Use stronger key size and explicit parameters for RHEL 9 compatibility
-        keytool -genkeypair -alias jboss -keyalg RSA -keysize 2048 \
-                -storetype JKS -keystore /tmp/keystore.jks \
-                -storepass mykeystorepass -keypass mykeystorepass \
-                -dname "CN=bob" -validity 365 \
-                -ext SAN=dns:localhost,ip:127.0.0.1
+        if [ "${KIE_KEYSTORE_DEBUG}" = "true" ]; then
+            log_info "Running keytool -genkeypair command (verbose mode enabled)"
+            keytool -genkeypair -alias jboss -keyalg RSA -keysize 2048 \
+                    -storetype JKS -keystore /tmp/keystore.jks \
+                    -storepass mykeystorepass -keypass mykeystorepass \
+                    -dname "CN=bob" -validity 365 \
+                    -ext SAN=dns:localhost,ip:127.0.0.1 \
+                    -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
+            local result=${PIPESTATUS[0]}
+        else
+            keytool -genkeypair -alias jboss -keyalg RSA -keysize 2048 \
+                    -storetype JKS -keystore /tmp/keystore.jks \
+                    -storepass mykeystorepass -keypass mykeystorepass \
+                    -dname "CN=bob" -validity 365 \
+                    -ext SAN=dns:localhost,ip:127.0.0.1
+            result=$?
+        fi
+        
+        if [ $result -eq 0 ]; then
+            log_info "Successfully generated test keystore"
+        else
+            log_warning "Failed to generate test keystore (exit code: ${result})"
+        fi
+        
         KIE_SERVER_ROUTER_TLS_KEYSTORE=/tmp/keystore.jks
     fi
 
     # Allow for optional volume mount or empty secret
     if ! [ -f "${KIE_SERVER_ROUTER_TLS_KEYSTORE}" ]; then
-	log_warning "Keystore file ${KIE_SERVER_ROUTER_TLS_KEYSTORE} not found or not a regular file, skipping https setup"
-	return
+ log_warning "Keystore file ${KIE_SERVER_ROUTER_TLS_KEYSTORE} not found or not a regular file, skipping https setup"
+ return
     fi
 
     # If the keystore is not readable, smartrouter startup will throw an exception
     # resulting in the http port being unavailable as well. So make sure ...
-    keytool -list -alias ${KIE_SERVER_ROUTER_TLS_KEYSTORE_KEYALIAS} \
-           -storetype JKS \
-           -storepass ${KIE_SERVER_ROUTER_TLS_KEYSTORE_PASSWORD} \
-           -keystore ${KIE_SERVER_ROUTER_TLS_KEYSTORE} &> /dev/null
-    if [ "$?" -ne 0 ]; then
- log_warning "Unable to read TLS keystore, skipping https setup"
- return
+    log_info "Verifying TLS keystore: ${KIE_SERVER_ROUTER_TLS_KEYSTORE}"
+    log_info "Checking for alias: ${KIE_SERVER_ROUTER_TLS_KEYSTORE_KEYALIAS}"
+    
+    if [ "${KIE_KEYSTORE_DEBUG}" = "true" ]; then
+        log_info "Running keytool -list command (verbose mode enabled)"
+        keytool -list -alias ${KIE_SERVER_ROUTER_TLS_KEYSTORE_KEYALIAS} \
+               -storetype JKS \
+               -storepass ${KIE_SERVER_ROUTER_TLS_KEYSTORE_PASSWORD} \
+               -keystore ${KIE_SERVER_ROUTER_TLS_KEYSTORE} \
+               -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
+        local result=${PIPESTATUS[0]}
+    else
+        keytool -list -alias ${KIE_SERVER_ROUTER_TLS_KEYSTORE_KEYALIAS} \
+               -storetype JKS \
+               -storepass ${KIE_SERVER_ROUTER_TLS_KEYSTORE_PASSWORD} \
+               -keystore ${KIE_SERVER_ROUTER_TLS_KEYSTORE} &> /dev/null
+        result=$?
+    fi
+    
+    if [ "$result" -ne 0 ]; then
+        log_warning "Unable to read TLS keystore (exit code: ${result}), skipping https setup"
+        return
+    else
+        log_info "TLS keystore verified successfully"
     fi
 
     JBOSS_KIE_ARGS="${JBOSS_KIE_ARGS} -Dorg.kie.server.router.tls.keystore=${KIE_SERVER_ROUTER_TLS_KEYSTORE}"
