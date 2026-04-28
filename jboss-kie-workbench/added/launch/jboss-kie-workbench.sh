@@ -97,29 +97,16 @@ function configure_kie_keystore() {
     log_info "Creating keystore entry for alias: ${serveralias}"
     
     # Use -importpass for UBI 9/Java 11+ compatibility (not -importpassword)
-    # Enable verbose logging if KIE_KEYSTORE_DEBUG is set
-    if [ "${KIE_KEYSTORE_DEBUG}" = "true" ]; then
-        log_info "Running keytool command for ${serveralias} (verbose mode enabled)"
-        echo $(get_kie_admin_pwd) | keytool -importpass \
-            -keystore ${keystore} \
-            -storepass ${storepass} \
-            -storetype ${storetype} \
-            -keypass ${keypass} \
-            -alias ${serveralias} \
-            -J-Djava.security.egd=file:/dev/./urandom \
-            -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
-        local result=${PIPESTATUS[0]}
-    else
-        echo $(get_kie_admin_pwd) | keytool -importpass \
-            -keystore ${keystore} \
-            -storepass ${storepass} \
-            -storetype ${storetype} \
-            -keypass ${keypass} \
-            -alias ${serveralias} \
-            -J-Djava.security.egd=file:/dev/./urandom \
-            > /dev/null 2>&1
-        local result=$?
-    fi
+    log_info "Running keytool command for ${serveralias}"
+    echo $(get_kie_admin_pwd) | keytool -importpass \
+        -keystore ${keystore} \
+        -storepass ${storepass} \
+        -storetype ${storetype} \
+        -keypass ${keypass} \
+        -alias ${serveralias} \
+        -J-Djava.security.egd=file:/dev/./urandom \
+        -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
+    local result=${PIPESTATUS[0]}
     
     if [ $result -eq 0 ]; then
         log_info "Successfully created keystore entry for alias: ${serveralias}"
@@ -131,28 +118,16 @@ function configure_kie_keystore() {
     log_info "Creating keystore entry for alias: ${ctrlalias}"
     
     # Use -importpass for UBI 9/Java 11+ compatibility (not -importpassword)
-    if [ "${KIE_KEYSTORE_DEBUG}" = "true" ]; then
-        log_info "Running keytool command for ${ctrlalias} (verbose mode enabled)"
-        echo $(get_kie_admin_pwd) | keytool -importpass \
-            -keystore ${keystore} \
-            -storepass ${storepass} \
-            -storetype ${storetype} \
-            -keypass ${keypass} \
-            -alias ${ctrlalias} \
-            -J-Djava.security.egd=file:/dev/./urandom \
-            -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
-        result=${PIPESTATUS[0]}
-    else
-        echo $(get_kie_admin_pwd) | keytool -importpass \
-            -keystore ${keystore} \
-            -storepass ${storepass} \
-            -storetype ${storetype} \
-            -keypass ${keypass} \
-            -alias ${ctrlalias} \
-            -J-Djava.security.egd=file:/dev/./urandom \
-            > /dev/null 2>&1
-        result=$?
-    fi
+    log_info "Running keytool command for ${ctrlalias}"
+    echo $(get_kie_admin_pwd) | keytool -importpass \
+        -keystore ${keystore} \
+        -storepass ${storepass} \
+        -storetype ${storetype} \
+        -keypass ${keypass} \
+        -alias ${ctrlalias} \
+        -J-Djava.security.egd=file:/dev/./urandom \
+        -v 2>&1 | while IFS= read -r line; do log_info "keytool: $line"; done
+    result=${PIPESTATUS[0]}
     
     if [ $result -eq 0 ]; then
         log_info "Successfully created keystore entry for alias: ${ctrlalias}"
